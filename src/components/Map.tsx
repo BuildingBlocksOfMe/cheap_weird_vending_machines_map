@@ -21,6 +21,7 @@ L.Marker.prototype.options.icon = DefaultIcon;
 interface MapProps {
   vendingMachines: VendingMachine[];
   onMapClick: (lat: number, lng: number) => void;
+  onMarkerClick: (vm: VendingMachine) => void;
   selectedLocation: { lat: number; lng: number } | null;
 }
 
@@ -33,7 +34,7 @@ function MapClickHandler({ onMapClick }: { onMapClick: (lat: number, lng: number
   return null;
 }
 
-export default function Map({ vendingMachines, onMapClick, selectedLocation }: MapProps) {
+export default function Map({ vendingMachines, onMapClick, onMarkerClick, selectedLocation }: MapProps) {
   // Center of Japan roughly
   const defaultPosition: [number, number] = [36.2048, 138.2529];
 
@@ -47,7 +48,15 @@ export default function Map({ vendingMachines, onMapClick, selectedLocation }: M
       
       {/* Existing Markers */}
       {vendingMachines.map((vm) => (
-        <Marker key={vm.id} position={[vm.lat, vm.lng]}>
+        <Marker 
+          key={vm.id} 
+          position={[vm.lat, vm.lng]}
+          eventHandlers={{
+            click: () => {
+              onMarkerClick(vm);
+            }
+          }}
+        >
           <Popup>
             <div className="p-2">
               <span className={`inline-block px-2 py-1 rounded text-white text-xs mb-1 ${vm.type === 'cheap' ? 'bg-green-500' : 'bg-purple-500'}`}>
@@ -65,6 +74,12 @@ export default function Map({ vendingMachines, onMapClick, selectedLocation }: M
                       />
                   </div>
               )}
+              <button
+                onClick={() => onMarkerClick(vm)}
+                className="mt-2 w-full bg-indigo-600 text-white text-xs py-1 px-2 rounded hover:bg-indigo-700"
+              >
+                追加投稿
+              </button>
             </div>
           </Popup>
         </Marker>

@@ -65,11 +65,33 @@ create policy "Anyone can insert a new vending machine."
 2. ポリシー設定で、`anon` ロールに対して `SELECT` と `INSERT` を許可します。
 
 ### 3. 環境変数の設定
-`.env.example` をコピーして `.env` を作成し、SupabaseのURLとAnon Keyを設定します。
 
-```bash
-cp .env.example .env
+#### 3-1. Supabaseの接続情報を取得
+
+1. [Supabaseダッシュボード](https://supabase.com/dashboard)にログインします
+2. プロジェクトを選択（または新規作成）します
+3. 左メニューの **Settings** (⚙️) をクリック
+4. **API** を選択
+5. 以下の2つの情報をコピーします：
+   - **Project URL** (例: `https://xxxxxxxxxxxxx.supabase.co`)
+   - **anon public** キー (長い文字列)
+
+#### 3-2. `.env` ファイルを作成
+
+プロジェクトのルートディレクトリに `.env` という名前のファイルを新規作成し、以下の内容を記入します：
+
+```env
+VITE_SUPABASE_URL=ここにProject URLを貼り付け
+VITE_SUPABASE_ANON_KEY=ここにanonキーを貼り付け
 ```
+
+**例：**
+```env
+VITE_SUPABASE_URL=https://abcdefghijklmnop.supabase.co
+VITE_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFiY2RlZmdoaWprbG1ub3AiLCJyb2xlIjoiYW5vbiIsImlhdCI6MTYzODk2NzI4MCwiZXhwIjoxOTU0NTQzMjgwfQ.xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+```
+
+**重要：** `.env` ファイルはGitにコミットされません（`.gitignore`で除外されています）。これは安全です。
 
 ### 4. 開発サーバーの起動
 ```bash

@@ -7,6 +7,7 @@ import PostForm from './components/PostForm';
 function App() {
   const [vendingMachines, setVendingMachines] = useState<VendingMachine[]>([]);
   const [selectedLocation, setSelectedLocation] = useState<{ lat: number; lng: number } | null>(null);
+  const [selectedVm, setSelectedVm] = useState<VendingMachine | null>(null);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -30,7 +31,8 @@ function App() {
     try {
       const { data, error } = await supabase
         .from('vending_machines')
-        .select('*');
+        .select('*')
+        .order('created_at', { ascending: false });
       
       if (error) {
         console.error('Error fetching data:', error);
@@ -44,12 +46,20 @@ function App() {
 
   const handleMapClick = (lat: number, lng: number) => {
     setSelectedLocation({ lat, lng });
+    setSelectedVm(null);
+    setIsFormOpen(true);
+  };
+
+  const handleMarkerClick = (vm: VendingMachine) => {
+    setSelectedVm(vm);
+    setSelectedLocation(null);
     setIsFormOpen(true);
   };
 
   const handlePostSuccess = () => {
     setIsFormOpen(false);
     setSelectedLocation(null);
+    setSelectedVm(null);
     fetchVendingMachines();
   };
 
@@ -103,6 +113,7 @@ VITE_SUPABASE_ANON_KEY=your_key_here`}
         <Map 
           vendingMachines={vendingMachines} 
           onMapClick={handleMapClick}
+          onMarkerClick={handleMarkerClick}
           selectedLocation={selectedLocation}
         />
       </main>
@@ -110,21 +121,32 @@ VITE_SUPABASE_ANON_KEY=your_key_here`}
       {isFormOpen && (
         <div className="absolute top-0 right-0 h-full w-full sm:w-96 bg-white shadow-xl z-20 p-4 overflow-y-auto transform transition-transform duration-300">
            <div className="flex justify-between items-center mb-4">
-             <h2 className="text-lg font-bold">自販機を追加</h2>
+             <h2 className="text-lg font-bold">
+               {selectedVm ? '追加投稿' : '自販機を追加'}
+             </h2>
              <button 
-               onClick={() => { setIsFormOpen(false); setSelectedLocation(null); }}
+               onClick={() => { 
+                 setIsFormOpen(false); 
+                 setSelectedLocation(null); 
+                 setSelectedVm(null); 
+               }}
                className="text-gray-500 hover:text-gray-700 p-2"
              >
                ✕
              </button>
            </div>
            
-           {selectedLocation && (
+           {(selectedLocation || selectedVm) && (
              <PostForm 
-               lat={selectedLocation.lat} 
-               lng={selectedLocation.lng} 
+               lat={selectedVm ? selectedVm.lat : selectedLocation!.lat} 
+               lng={selectedVm ? selectedVm.lng : selectedLocation!.lng}
+               existingVm={selectedVm}
                onSuccess={handlePostSuccess}
-               onCancel={() => { setIsFormOpen(false); setSelectedLocation(null); }}
+               onCancel={() => { 
+                 setIsFormOpen(false); 
+                 setSelectedLocation(null); 
+                 setSelectedVm(null); 
+               }}
              />
            )}
         </div>

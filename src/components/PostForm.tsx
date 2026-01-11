@@ -1,22 +1,32 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { supabase } from '../supabase';
-import type { VendingMachineType } from '../types';
+import type { VendingMachineType, VendingMachine } from '../types';
 import { Loader2, Upload } from 'lucide-react';
 
 interface PostFormProps {
   lat: number;
   lng: number;
+  existingVm?: VendingMachine | null;
   onSuccess: () => void;
   onCancel: () => void;
 }
 
-export default function PostForm({ lat, lng, onSuccess, onCancel }: PostFormProps) {
-  const [type, setType] = useState<VendingMachineType>('cheap');
-  const [price, setPrice] = useState<string>('');
+export default function PostForm({ lat, lng, existingVm, onSuccess, onCancel }: PostFormProps) {
+  const [type, setType] = useState<VendingMachineType>(existingVm?.type || 'cheap');
+  const [price, setPrice] = useState<string>(existingVm?.price?.toString() || '');
   const [description, setDescription] = useState('');
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (existingVm) {
+      setType(existingVm.type);
+      if (existingVm.price) {
+        setPrice(existingVm.price.toString());
+      }
+    }
+  }, [existingVm]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -41,15 +51,17 @@ export default function PostForm({ lat, lng, onSuccess, onCancel }: PostFormProp
         imagePath = filePath;
       }
 
+      // 既存の自販機がある場合は、同じ位置に新しいレコードを作成（追加投稿）
+      // 既存の自販機がない場合は、新しい自販機として作成
       const { error: insertError } = await supabase
         .from('vending_machines')
         .insert([
           {
-            lat,
-            lng,
-            type,
-            price: price ? parseInt(price) : null,
-            description,
+            lat: existingVm ? existingVm.lat : lat,
+            lng: existingVm ? existingVm.lng : lng,
+            type: existingVm ? existingVm.type : type,
+            price: price ? parseInt(price) : (existingVm?.price || null),
+            description: description || null,
             image_path: imagePath,
           },
         ]);
@@ -75,44 +87,58 @@ export default function PostForm({ lat, lng, onSuccess, onCancel }: PostFormProp
         </div>
       )}
 
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-2">タイプ</label>
-        <div className="mt-1 flex gap-4">
-          <label className="inline-flex items-center cursor-pointer">
-            <input
-              type="radio"
-              className="w-4 h-4 text-indigo-600 border-gray-300 focus:ring-indigo-500"
-              name="type"
-              value="cheap"
-              checked={type === 'cheap'}
-              onChange={() => setType('cheap')}
-            />
-            <span className="ml-2 text-sm">安い自販機</span>
-          </label>
-          <label className="inline-flex items-center cursor-pointer">
-            <input
-              type="radio"
-              className="w-4 h-4 text-purple-600 border-gray-300 focus:ring-purple-500"
-              name="type"
-              value="weird"
-              checked={type === 'weird'}
-              onChange={() => setType('weird')}
-            />
-            <span className="ml-2 text-sm">変な自販機</span>
-          </label>
+      {existingVm && (
+        <div className="bg-blue-50 border border-blue-200 rounded p-3 text-sm">
+          <p className="font-medium text-blue-800">既存の自販機に追加投稿します</p>
+          <p className="text-blue-600 mt-1">
+            {existingVm.type === 'cheap' ? '安い' : '変な'}自販機
+            {existingVm.price && ` - ¥${existingVm.price}`}
+          </p>
         </div>
-      </div>
+      )}
 
-      <div>
-        <label className="block text-sm font-medium text-gray-700">価格 (任意)</label>
-        <input
-          type="number"
-          value={price}
-          onChange={(e) => setPrice(e.target.value)}
-          className="mt-1 block w-full rounded-md border border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm p-2"
-          placeholder="100"
-        />
-      </div>
+      {!existingVm && (
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">タイプ</label>
+          <div className="mt-1 flex gap-4">
+            <label className="inline-flex items-center cursor-pointer">
+              <input
+                type="radio"
+                className="w-4 h-4 text-indigo-600 border-gray-300 focus:ring-indigo-500"
+                name="type"
+                value="cheap"
+                checked={type === 'cheap'}
+                onChange={() => setType('cheap')}
+              />
+              <span className="ml-2 text-sm">安い自販機</span>
+            </label>
+            <label className="inline-flex items-center cursor-pointer">
+              <input
+                type="radio"
+                className="w-4 h-4 text-purple-600 border-gray-300 focus:ring-purple-500"
+                name="type"
+                value="weird"
+                checked={type === 'weird'}
+                onChange={() => setType('weird')}
+              />
+              <span className="ml-2 text-sm">変な自販機</span>
+            </label>
+          </div>
+        </div>
+      )}
+
+      {!existingVm && (
+        <div>
+          <label className="block text-sm font-medium text-gray-700">価格 (任意)</label>
+          <input
+            type="number"
+            value={price}
+            onChange={(e) => setPrice(e.target.value)}
+            className="mt-1 block w-full rounded-md border border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm p-2"
+            placeholder="100"
+          />
+        </div>
+      )}
 
       <div>
         <label className="block text-sm font-medium text-gray-700">説明・コメント</label>
@@ -121,6 +147,7 @@ export default function PostForm({ lat, lng, onSuccess, onCancel }: PostFormProp
           onChange={(e) => setDescription(e.target.value)}
           rows={3}
           className="mt-1 block w-full rounded-md border border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm p-2"
+          placeholder={existingVm ? "追加のコメントや情報を入力..." : "コメントを入力..."}
         />
       </div>
 
@@ -160,7 +187,7 @@ export default function PostForm({ lat, lng, onSuccess, onCancel }: PostFormProp
                   送信中
               </>
           ) : (
-              '投稿する'
+              existingVm ? '追加投稿する' : '投稿する'
           )}
         </button>
       </div>
